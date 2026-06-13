@@ -20,35 +20,43 @@ export function buildPrompt({ background, expression, pose, outfit, accessory, p
   return parts.join(' ')
 }
 
+// POST to GAS using text/plain to avoid CORS preflight
+async function gasPost(payload) {
+  const res = await axios.post(GAS_URL, JSON.stringify(payload), {
+    headers: { 'Content-Type': 'text/plain' },
+  })
+  return res.data
+}
+
 // Generate image via GAS middleware (hides API key from browser)
 export async function generateImage(images, prompt) {
-  const res = await axios.post(GAS_URL, {
+  const data = await gasPost({
     action: 'generateImage',
     images: images.map(img => ({ base64: img.base64, mimeType: img.mimeType })),
     prompt,
     petCount: images.length,
   })
-  if (!res.data.success) throw new Error(`Gemini API 錯誤：${res.data.error}`)
-  return { base64: res.data.base64, mimeType: res.data.mimeType }
+  if (!data.success) throw new Error(`Gemini API 錯誤：${data.error}`)
+  return { base64: data.base64, mimeType: data.mimeType }
 }
 
 // Refine generated image via GAS middleware
 export async function refineImage(generatedBase64, generatedMimeType, refineText) {
-  const res = await axios.post(GAS_URL, {
+  const data = await gasPost({
     action: 'generateImage',
     images: [{ base64: generatedBase64, mimeType: generatedMimeType }],
     prompt: `This is an AI-generated photorealistic pet photo. Apply the following refinement while keeping the photorealistic style and all pet features intact: ${refineText}. Ultra high resolution, sharp focus, photorealistic.`,
     petCount: 1,
   })
-  if (!res.data.success) throw new Error(`微調失敗：${res.data.error}`)
-  return { base64: res.data.base64, mimeType: res.data.mimeType }
+  if (!data.success) throw new Error(`微調失敗：${data.error}`)
+  return { base64: data.base64, mimeType: data.mimeType }
 }
 
 // Save confirmed image to Google Drive via GAS
 export async function saveToGoogleDrive(base64, mimeType, filename) {
   if (!GAS_URL) return null
-  const res = await axios.post(GAS_URL, { action: 'saveImage', base64, mimeType, filename })
-  return res.data?.fileUrl || null
+  const data = await gasPost({ action: 'saveImage', base64, mimeType, filename })
+  return data?.fileUrl || null
 }
 
 // Fetch gallery from Google Drive via GAS
