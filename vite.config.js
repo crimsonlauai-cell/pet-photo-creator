@@ -4,13 +4,4 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/pet-photo-creator/',
-  server: {
-    proxy: {
-      '/gemini-proxy': {
-        target: 'https://generativelanguage.googleapis.com',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/gemini-proxy/, ''),
-      }
-    }
-  }
 })
